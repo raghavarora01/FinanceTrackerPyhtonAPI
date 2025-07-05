@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import os
 import logging
 
-# Setup logging
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 logging.getLogger("pymongo").setLevel(logging.WARNING)
@@ -17,16 +17,15 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 # Flask app initialization
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=[
-    "http://localhost:3000",
     "https://finance-tracker-ui-ten.vercel.app"
 ])
 
 load_dotenv()
 MONGO_URI = os.getenv('MONGO_URI')
-PORT = int(os.environ.get("PORT", 5000))  # For Render compatibility
+PORT = int(os.environ.get("PORT", 5000))  
 DB_NAME = 'Finance_Tracker'
 
-# Connect to MongoDB
+
 try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     db = client[DB_NAME]
@@ -38,12 +37,10 @@ except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {str(e)}")
     raise
 
-# 🔹 Root route for health check
 @app.route("/")
 def home():
     return jsonify({"message": "🚀 Finance Tracker Python API is live!"})
 
-# 🔹 Suggestions route
 @app.route('/suggestions/<user_id>', methods=['GET'])
 def get_suggestions(user_id):
     try:
@@ -82,7 +79,6 @@ def get_suggestions(user_id):
 
         suggestions = []
 
-        # Suggestion 1: High spending category
         category_spending = df.groupby('Category')['Amount'].sum().sort_values(ascending=False)
         total_spending = category_spending.sum()
 
@@ -94,7 +90,6 @@ def get_suggestions(user_id):
                     f"You're spending a lot on {top_category} (₹{top_amount:.2f}). Try to reduce it by 15% next month."
                 )
 
-        # Suggestion 2: Month-over-month increase
         sixty_days_ago = datetime.now() - timedelta(days=60)
         prev_expenses = expenses_collection.find({
             'userId': ObjectId(user_id),
@@ -120,7 +115,6 @@ def get_suggestions(user_id):
                         f"(₹{current_spend:.2f} vs ₹{prev_spend:.2f}). Consider reviewing these expenses."
                     )
 
-        # Suggestion 3: Budget check
         current_month = datetime.now().strftime('%Y-%m')
         budgets = budgets_collection.find({
             'userId': ObjectId(user_id),
@@ -140,7 +134,6 @@ def get_suggestions(user_id):
             except (KeyError, TypeError):
                 continue
 
-        # Suggestion 4: Overall spending alert
         if total_spending > 5000:
             suggestions.append(
                 f"Your total spending this month is ₹{total_spending:.2f}. "
@@ -156,6 +149,5 @@ def get_suggestions(user_id):
         logger.error(f"Error processing suggestions: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Run app (for Render & local)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT, debug=True)
